@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	celery "github.com/celery-go-client"
+	celery "github.com/alaikis/celery-go-client"
 )
 
 func main() {
