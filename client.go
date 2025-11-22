@@ -1,0 +1,125 @@
+package celery
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+// Client is the main Celery client
+type Client struct {
+	broker   Broker
+	queue    string
+	exchange string
+}
+
+// ClientConfig contains configuration for Celery client
+type ClientConfig struct {
+	Broker   Broker // The broker implementation to use
+	Queue    string // Default queue name (default: "celery")
+	Exchange string // Default exchange name (default: "celery")
+}
+
+// NewClient creates a new Celery client
+func NewClient(config ClientConfig) *Client {
+	if config.Queue == "" {
+		config.Queue = "celery"
+	}
+	if config.Exchange == "" {
+		config.Exchange = "celery"
+	}
+
+	return &Client{
+		broker:   config.Broker,
+		queue:    config.Queue,
+		exchange: config.Exchange,
+	}
+}
+
+// TaskOptions contains options for task execution
+type TaskOptions struct {
+	Queue    string                 // Override default queue
+	Exchange string                 // Override default exchange
+	ETA      *time.Time             // Estimated time of arrival
+	Expires  *time.Time             // Task expiration time
+	Args     []interface{}          // Positional arguments
+	Kwargs   map[string]interface{} // Keyword arguments
+}
+
+// SendTask sends a task to the Celery worker
+func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOptions) (string, error) {
+	if options == nil {
+		options = &TaskOptions{}
+	}
+
+	// Create task message
+	taskMsg := NewTaskMessage(taskName, options.Args, options.Kwargs)
+
+	// Set ETA if provided
+	if options.ETA != nil {
+		taskMsg.SetETA(*options.ETA)
+	}
+
+	// Set expiration if provided
+	if options.Expires != nil {
+		taskMsg.SetExpires(*options.Expires)
+	}
+
+	// Encode task message
+	encodedBody, err := taskMsg.Encode()
+	if err != nil {
+		return "", fmt.Errorf("failed to encode task message: %w", err)
+	}
+
+	// Determine queue and exchange
+	queue := c.queue
+	if options.Queue != "" {
+		queue = options.Queue
+	}
+
+	exchange := c.exchange
+	if options.Exchange != "" {
+		exchange = options.Exchange
+	}
+
+	// Create Celery message envelope
+	celeryMsg := NewCeleryMessage(encodedBody, queue, exchange)
+
+	// Send to broker
+	if err := c.broker.SendTask(ctx, celeryMsg); err != nil {
+		return "", fmt.Errorf("failed to send task: %w", err)
+	}
+
+	return taskMsg.ID, nil
+}
+
+// SendTaskWithArgs is a convenience method to send a task with positional arguments
+func (c *Client) SendTaskWithArgs(ctx context.Context, taskName string, args ...interface{}) (string, error) {
+	return c.SendTask(ctx, taskName, &TaskOptions{
+		Args: args,
+	})
+}
+
+// SendTaskWithKwargs is a convenience method to send a task with keyword arguments
+func (c *Client) SendTaskWithKwargs(ctx context.Context, taskName string, kwargs map[string]interface{}) (string, error) {
+	return c.SendTask(ctx, taskName, &TaskOptions{
+		Kwargs: kwargs,
+	})
+}
+
+// SendTaskToQueue sends a task to a specific queue
+func (c *Client) SendTaskToQueue(ctx context.Context, taskName, queue string, args []interface{}, kwargs map[string]interface{}) (string, error) {
+	return c.SendTask(ctx, taskName, &TaskOptions{
+		Queue:  queue,
+		Args:   args,
+		Kwargs: kwargs,
+	})
+}
+
+// Close closes the client and its broker connection
+func (c *Client) Close() error {
+	if c.broker != nil {
+		return c.broker.Close()
+	}
+	return nil
+}
