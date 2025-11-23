@@ -15,7 +15,7 @@
 ## 安装
 
 ```bash
-go get github.com/alaikis/celery-go-client
+go get github.com/celery-go-client
 ```
 
 ## 快速开始
@@ -29,7 +29,7 @@ import (
     "context"
     "log"
     
-    celery "github.com/alaikis/celery-go-client"
+    celery "github.com/celery-go-client"
 )
 
 func main() {
@@ -63,7 +63,7 @@ func main() {
 }
 ```
 
-### 使用 RabbitMQ (AMQP) 作为 Broker
+### 使用 RabbitMQ (AMQP) 作为 Broker (默认 Base64 编码)
 
 ```go
 package main
@@ -72,7 +72,7 @@ import (
     "context"
     "log"
     
-    celery "github.com/alaikis/celery-go-client"
+    celery "github.com/celery-go-client"
 )
 
 func main() {
@@ -93,6 +93,16 @@ func main() {
         Queue:    "celery",
         Exchange: "celery",
     })
+    
+    // 如果需要发送原始 JSON 消息体 (非 Base64 编码),请使用以下配置:
+    /*
+    client := celery.NewClient(celery.ClientConfig{
+        Broker:   broker,
+        Queue:    "celery",
+        Exchange: "celery",
+        UseRawJSONBody: true, // 启用原始 JSON 消息体
+    })
+    */
     defer client.Close()
 
     // 发送任务
@@ -108,13 +118,13 @@ func main() {
 
 ## 使用示例
 
-### 1. 发送带位置参数的任务
+### 1. 发送带位置参数的任务 (默认 Base64 编码)
 
 ```go
 taskID, err := client.SendTaskWithArgs(ctx, "tasks.add", 10, 20)
 ```
 
-### 2. 发送带关键字参数的任务
+### 2. 发送带关键字参数的任务 (默认 Base64 编码)
 
 ```go
 taskID, err := client.SendTaskWithKwargs(ctx, "tasks.process_data", map[string]interface{}{
@@ -124,7 +134,7 @@ taskID, err := client.SendTaskWithKwargs(ctx, "tasks.process_data", map[string]i
 })
 ```
 
-### 3. 发送带位置参数和关键字参数的任务
+### 3. 发送带位置参数和关键字参数的任务 (默认 Base64 编码)
 
 ```go
 taskID, err := client.SendTask(ctx, "tasks.complex_task", &celery.TaskOptions{
@@ -136,7 +146,7 @@ taskID, err := client.SendTask(ctx, "tasks.complex_task", &celery.TaskOptions{
 })
 ```
 
-### 4. 发送定时任务 (ETA)
+### 4. 发送定时任务 (ETA) (默认 Base64 编码)
 
 ```go
 eta := time.Now().Add(5 * time.Minute)
@@ -146,7 +156,7 @@ taskID, err := client.SendTask(ctx, "tasks.scheduled_task", &celery.TaskOptions{
 })
 ```
 
-### 5. 发送带过期时间的任务
+### 5. 发送带过期时间的任务 (默认 Base64 编码)
 
 ```go
 expires := time.Now().Add(10 * time.Minute)
@@ -156,7 +166,7 @@ taskID, err := client.SendTask(ctx, "tasks.temporary_task", &celery.TaskOptions{
 })
 ```
 
-### 6. 发送到指定队列
+### 6. 发送到指定队列 (默认 Base64 编码)
 
 ```go
 taskID, err := client.SendTaskToQueue(ctx, "tasks.priority_task", "high_priority",
@@ -299,9 +309,25 @@ type TaskOptions struct {
 
 ## 协议说明
 
+默认情况下,客户端使用 Base64 编码的 JSON 消息体,以确保与标准 Celery worker 的兼容性。
+
+### 原始 JSON 消息体 (Raw JSON Body)
+
+当 `ClientConfig.UseRawJSONBody` 设置为 `true` 时,客户端将直接发送 TaskMessage 的 JSON 字符串作为消息体,此时消息头将变为:
+
+- **CeleryMessage.Body**: TaskMessage 的原始 JSON 字符串
+- **CeleryMessage.ContentType**: `application/json`
+- **CeleryMessage.Properties.BodyEncoding**: `utf-8` (表示消息体是 utf-8 编码的原始 JSON)
+
+这种模式通常用于 worker 端配置为接受原始 JSON 消息体的场景。
+
+### Base64 编码消息格式
+
 本客户端实现了 **Celery 协议版本 1**,消息格式如下:
 
-### 外层消息 (CeleryMessage)
+本客户端实现了 **Celery 协议版本 1**,消息格式如下:
+
+### 外层消息 (CeleryMessage, Base64 编码)
 
 ```json
 {
@@ -323,7 +349,7 @@ type TaskOptions struct {
 }
 ```
 
-### 内层消息 (TaskMessage, base64 解码后)
+### 内层消息 (TaskMessage, Base64 解码后)
 
 ```json
 {

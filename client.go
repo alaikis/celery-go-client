@@ -11,6 +11,9 @@ type Client struct {
 	broker   Broker
 	queue    string
 	exchange string
+	// UseRawJSONBody is a flag to indicate whether to use raw JSON body instead of base64 encoded body
+	// This is typically used for AMQP brokers where the worker is configured to accept raw JSON.
+	UseRawJSONBody bool
 }
 
 // ClientConfig contains configuration for Celery client
@@ -18,6 +21,8 @@ type ClientConfig struct {
 	Broker   Broker // The broker implementation to use
 	Queue    string // Default queue name (default: "celery")
 	Exchange string // Default exchange name (default: "celery")
+	// UseRawJSONBody is a flag to indicate whether to use raw JSON body instead of base64 encoded body
+	UseRawJSONBody bool
 }
 
 // NewClient creates a new Celery client
@@ -33,6 +38,7 @@ func NewClient(config ClientConfig) *Client {
 		broker:   config.Broker,
 		queue:    config.Queue,
 		exchange: config.Exchange,
+		UseRawJSONBody: config.UseRawJSONBody,
 	}
 }
 
@@ -66,9 +72,32 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 	}
 
 	// Encode task message
-	encodedBody, err := taskMsg.Encode()
-	if err != nil {
-		return "", fmt.Errorf("failed to encode task message: %w", err)
+	var encodedBody string
+	var contentType string = "application/json"
+	var bodyEncoding string = "base64"
+	var contentEncoding string = "utf-8"
+
+	if c.UseRawJSONBody {
+		encodedBody, err = taskMsg.EncodeJSON()
+		if err != nil {
+			return "", fmt.Errorf("failed to encode task message to raw JSON: %w", err)
+		}
+		// When using raw JSON body, the content-type should be application/json
+		// and body_encoding should be set to "json" or similar, but Celery protocol v1
+		// expects "base64" in properties.body_encoding for base64 body.
+		// For raw JSON body, we set content-type to application/json and body_encoding to utf-8
+		// as the body is the raw JSON string itself.
+		contentType = "application/json"
+		bodyEncoding = "utf-8" // Indicate the body is utf-8 encoded raw JSON
+		contentEncoding = "utf-8"
+	} else {
+		encodedBody, err = taskMsg.Encode() // Base64 encoded JSON
+		if err != nil {
+			return "", fmt.Errorf("failed to encode task message to base64: %w", err)
+		}
+		contentType = "application/json"
+		bodyEncoding = "base64"
+		contentEncoding = "utf-8"
 	}
 
 	// Determine queue and exchange
@@ -83,7 +112,29 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 	}
 
 	// Create Celery message envelope
-	celeryMsg := NewCeleryMessage(encodedBody, queue, exchange)
+	celeryMsg := NewCeleryMessageWithEncoding(encodedBody, queue, exchange, contentType, bodyEncoding, contentEncoding)
+
+	// Send to broker
+	if err := c.broker.SendTask(ctx, celeryMsg); err != nil {
+		return "", fmt.Errorf("failed to send task: %w", err)
+	}
+
+	return taskMsg.ID, nil
+}
+
+	// Determine queue and exchange
+	queue := c.queue
+	if options.Queue != "" {
+		queue = options.Queue
+	}
+
+	exchange := c.exchange
+	if options.Exchange != "" {
+		exchange = options.Exchange
+	}
+
+	// Create Celery message envelope
+	celeryMsg := NewCeleryMessageWithEncoding(encodedBody, queue, exchange, contentType, bodyEncoding, contentEncoding)
 
 	// Send to broker
 	if err := c.broker.SendTask(ctx, celeryMsg); err != nil {

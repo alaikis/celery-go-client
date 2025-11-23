@@ -85,8 +85,22 @@ func (tm *TaskMessage) Encode() (string, error) {
 	return encodedData, nil
 }
 
+// EncodeJSON serializes the task message to raw JSON string
+func (tm *TaskMessage) EncodeJSON() (string, error) {
+	jsonData, err := json.Marshal(tm)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonData), nil
+}
+
 // NewCeleryMessage creates a new Celery message envelope
 func NewCeleryMessage(encodedBody, queue, exchange string) *CeleryMessage {
+	return NewCeleryMessageWithEncoding(encodedBody, queue, exchange, "application/json", "base64", "utf-8")
+}
+
+// NewCeleryMessageWithEncoding creates a new Celery message envelope with custom encoding
+func NewCeleryMessageWithEncoding(body, queue, exchange, contentType, bodyEncoding, contentEncoding string) *CeleryMessage {
 	if queue == "" {
 		queue = "celery"
 	}
@@ -95,10 +109,10 @@ func NewCeleryMessage(encodedBody, queue, exchange string) *CeleryMessage {
 	}
 
 	return &CeleryMessage{
-		Body:        encodedBody,
-		ContentType: "application/json",
+		Body:        body,
+		ContentType: contentType,
 		Properties: CeleryProperties{
-			BodyEncoding:  "base64",
+			BodyEncoding:  bodyEncoding,
 			CorrelationID: uuid.New().String(),
 			ReplyTo:       uuid.New().String(),
 			DeliveryInfo: CeleryDeliveryInfo{
@@ -109,7 +123,7 @@ func NewCeleryMessage(encodedBody, queue, exchange string) *CeleryMessage {
 			DeliveryMode: 2, // persistent
 			DeliveryTag:  uuid.New().String(),
 		},
-		ContentEncoding: "utf-8",
+		ContentEncoding: contentEncoding,
 	}
 }
 
@@ -117,3 +131,6 @@ func NewCeleryMessage(encodedBody, queue, exchange string) *CeleryMessage {
 func (cm *CeleryMessage) Encode() ([]byte, error) {
 	return json.Marshal(cm)
 }
+
+
+

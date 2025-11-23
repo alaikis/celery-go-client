@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	celery "github.com/alaikis/celery-go-client"
+	celery "github.com/celery-go-client"
 )
 
 func main() {
@@ -79,8 +79,8 @@ func main() {
 
 	// Example 5: Send task to a specific queue
 	fmt.Println("\nExample 5: Sending task to specific queue...")
-	taskID5, err := client.SendTaskToQueue(ctx, "tasks.priority_task", "high_priority",
-		[]interface{}{"urgent"},
+	taskID5, err := client.SendTaskToQueue(ctx, "tasks.priority_task", "high_priority", 
+		[]interface{}{"urgent"}, 
 		map[string]interface{}{"priority": "high"},
 	)
 	if err != nil {

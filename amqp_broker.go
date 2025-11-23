@@ -99,11 +99,10 @@ func NewAMQPBroker(config AMQPBrokerConfig) (*AMQPBroker, error) {
 
 // SendTask sends a task message to RabbitMQ
 func (ab *AMQPBroker) SendTask(ctx context.Context, message *CeleryMessage) error {
-	// Encode the message to JSON
-	data, err := message.Encode()
-	if err != nil {
-		return fmt.Errorf("failed to encode message: %w", err)
-	}
+	// Use the raw body of CeleryMessage as the AMQP message body
+	// This is because the CeleryMessage body already contains the task message,
+	// either base64 encoded or raw JSON, depending on the client configuration.
+	data := []byte(message.Body)
 
 	// Determine routing key
 	routingKey := ab.queue
@@ -126,7 +125,7 @@ func (ab *AMQPBroker) SendTask(ctx context.Context, message *CeleryMessage) erro
 		false,      // immediate
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
-			ContentType:  "application/json",
+			ContentType:  message.ContentType, // Use the ContentType from CeleryMessage
 			Body:         data,
 		},
 	)

@@ -1,4 +1,4 @@
-module github.com/alaikis/celery-go-client
+module github.com/celery-go-client
 
 go 1.21.5
 
