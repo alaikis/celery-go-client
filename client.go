@@ -72,17 +72,17 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 	}
 
 	// Encode task message
-	var encodedBody string
+	var encodedBody []byte
 	var contentType string = "application/json"
 	var bodyEncoding string = "base64"
 	var contentEncoding string = "utf-8"
 
 	if c.UseRawJSONBody {
-		var err error
-		encodedBody, err = taskMsg.EncodeJSON()
+		rawJSON, err := taskMsg.EncodeJSON()
 		if err != nil {
 			return "", fmt.Errorf("failed to encode task message to raw JSON: %w", err)
 		}
+		encodedBody = []byte(rawJSON)
 		// When using raw JSON body, the content-type should be application/json
 		// and body_encoding should be set to "json" or similar, but Celery protocol v1
 		// expects "base64" in properties.body_encoding for base64 body.
@@ -92,11 +92,11 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 		bodyEncoding = "utf-8" // Indicate the body is utf-8 encoded raw JSON
 		contentEncoding = "utf-8"
 	} else {
-		var err error
-		encodedBody, err = taskMsg.Encode() // Base64 encoded JSON
+		base64Str, err := taskMsg.Encode() // Base64 encoded JSON
 		if err != nil {
 			return "", fmt.Errorf("failed to encode task message to base64: %w", err)
 		}
+		encodedBody = []byte(`"` + base64Str + `"`) // Base64 编码的字符串需要用引号包裹,以符合 json.RawMessage 的要求
 		contentType = "application/json"
 		bodyEncoding = "base64"
 		contentEncoding = "utf-8"

@@ -315,15 +315,13 @@ type TaskOptions struct {
 
 当 `ClientConfig.UseRawJSONBody` 设置为 `true` 时,客户端将直接发送 TaskMessage 的 JSON 字符串作为消息体,此时消息头将变为:
 
-- **CeleryMessage.Body**: TaskMessage 的原始 JSON 字符串
+- **CeleryMessage.Body**: TaskMessage 的原始 JSON 对象 (未转义)
 - **CeleryMessage.ContentType**: `application/json`
 - **CeleryMessage.Properties.BodyEncoding**: `utf-8` (表示消息体是 utf-8 编码的原始 JSON)
 
 这种模式通常用于 worker 端配置为接受原始 JSON 消息体的场景。
 
 ### Base64 编码消息格式
-
-本客户端实现了 **Celery 协议版本 1**,消息格式如下:
 
 本客户端实现了 **Celery 协议版本 1**,消息格式如下:
 

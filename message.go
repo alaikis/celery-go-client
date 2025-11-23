@@ -22,7 +22,7 @@ type TaskMessage struct {
 
 // CeleryMessage is the outer message envelope sent to the broker
 type CeleryMessage struct {
-	Body            string                 `json:"body"`
+	Body            json.RawMessage        `json:"body"`
 	Headers         map[string]interface{} `json:"headers,omitempty"`
 	ContentType     string                 `json:"content-type"`
 	Properties      CeleryProperties       `json:"properties"`
@@ -95,12 +95,12 @@ func (tm *TaskMessage) EncodeJSON() (string, error) {
 }
 
 // NewCeleryMessage creates a new Celery message envelope
-func NewCeleryMessage(encodedBody, queue, exchange string) *CeleryMessage {
+func NewCeleryMessage(encodedBody []byte, queue, exchange string) *CeleryMessage {
 	return NewCeleryMessageWithEncoding(encodedBody, queue, exchange, "application/json", "base64", "utf-8")
 }
 
 // NewCeleryMessageWithEncoding creates a new Celery message envelope with custom encoding
-func NewCeleryMessageWithEncoding(body, queue, exchange, contentType, bodyEncoding, contentEncoding string) *CeleryMessage {
+func NewCeleryMessageWithEncoding(body []byte, queue, exchange, contentType, bodyEncoding, contentEncoding string) *CeleryMessage {
 	if queue == "" {
 		queue = "celery"
 	}
@@ -131,6 +131,3 @@ func NewCeleryMessageWithEncoding(body, queue, exchange, contentType, bodyEncodi
 func (cm *CeleryMessage) Encode() ([]byte, error) {
 	return json.Marshal(cm)
 }
-
-
-

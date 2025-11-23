@@ -123,14 +123,14 @@ func TestTaskMessageEncode(t *testing.T) {
 }
 
 func TestNewCeleryMessage(t *testing.T) {
-	encodedBody := "dGVzdA=="
+	encodedBody := []byte(`"dGVzdA=="`)
 	queue := "test_queue"
 	exchange := "test_exchange"
 
 	msg := NewCeleryMessage(encodedBody, queue, exchange)
 
-	if msg.Body != encodedBody {
-		t.Errorf("Expected body %s, got %s", encodedBody, msg.Body)
+	if string(msg.Body) != string(encodedBody) {
+		t.Errorf("Expected body %s, got %s", string(encodedBody), string(msg.Body))
 	}
 
 	if msg.ContentType != "application/json" {
@@ -159,7 +159,7 @@ func TestNewCeleryMessage(t *testing.T) {
 }
 
 func TestNewCeleryMessageDefaults(t *testing.T) {
-	msg := NewCeleryMessage("test", "", "")
+	msg := NewCeleryMessage([]byte(`"test"`), "", "")
 
 	if msg.Properties.DeliveryInfo.RoutingKey != "celery" {
 		t.Errorf("Expected default routing_key celery, got %s", msg.Properties.DeliveryInfo.RoutingKey)
@@ -171,7 +171,7 @@ func TestNewCeleryMessageDefaults(t *testing.T) {
 }
 
 func TestCeleryMessageEncode(t *testing.T) {
-	msg := NewCeleryMessage("test_body", "test_queue", "test_exchange")
+	msg := NewCeleryMessage([]byte(`"test_body"`), "test_queue", "test_exchange")
 
 	encoded, err := msg.Encode()
 	if err != nil {
@@ -184,8 +184,8 @@ func TestCeleryMessageEncode(t *testing.T) {
 		t.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
 
-	if result.Body != "test_body" {
-		t.Errorf("Expected body test_body, got %s", result.Body)
+	if string(result.Body) != `"test_body"` {
+		t.Errorf("Expected body \"test_body\", got %s", string(result.Body))
 	}
 
 	if result.Properties.DeliveryInfo.RoutingKey != "test_queue" {
@@ -196,12 +196,13 @@ func TestCeleryMessageEncode(t *testing.T) {
 func TestFullMessageFlow(t *testing.T) {
 	// Create task message
 	taskMsg := NewTaskMessage("tasks.add", []interface{}{5, 10}, nil)
-	
+
 	// Encode task message
-	encodedTask, err := taskMsg.Encode()
+	encodedTaskStr, err := taskMsg.Encode()
 	if err != nil {
 		t.Fatalf("Failed to encode task: %v", err)
 	}
+	encodedTask := []byte(`"` + encodedTaskStr + `"`)
 
 	// Create Celery message
 	celeryMsg := NewCeleryMessage(encodedTask, "celery", "celery")
