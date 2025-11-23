@@ -117,7 +117,7 @@ func (ab *AMQPBroker) SendTask(ctx context.Context, message *CeleryMessage) erro
 	}
 
 	// Publish message
-	err = ab.channel.PublishWithContext(
+	if err := ab.channel.PublishWithContext(
 		ctx,
 		exchange,   // exchange
 		routingKey, // routing key
@@ -128,8 +128,7 @@ func (ab *AMQPBroker) SendTask(ctx context.Context, message *CeleryMessage) erro
 			ContentType:  message.ContentType, // Use the ContentType from CeleryMessage
 			Body:         data,
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 

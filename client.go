@@ -35,9 +35,9 @@ func NewClient(config ClientConfig) *Client {
 	}
 
 	return &Client{
-		broker:   config.Broker,
-		queue:    config.Queue,
-		exchange: config.Exchange,
+		broker:         config.Broker,
+		queue:          config.Queue,
+		exchange:       config.Exchange,
 		UseRawJSONBody: config.UseRawJSONBody,
 	}
 }
@@ -78,6 +78,7 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 	var contentEncoding string = "utf-8"
 
 	if c.UseRawJSONBody {
+		var err error
 		encodedBody, err = taskMsg.EncodeJSON()
 		if err != nil {
 			return "", fmt.Errorf("failed to encode task message to raw JSON: %w", err)
@@ -91,6 +92,7 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 		bodyEncoding = "utf-8" // Indicate the body is utf-8 encoded raw JSON
 		contentEncoding = "utf-8"
 	} else {
+		var err error
 		encodedBody, err = taskMsg.Encode() // Base64 encoded JSON
 		if err != nil {
 			return "", fmt.Errorf("failed to encode task message to base64: %w", err)
@@ -99,28 +101,6 @@ func (c *Client) SendTask(ctx context.Context, taskName string, options *TaskOpt
 		bodyEncoding = "base64"
 		contentEncoding = "utf-8"
 	}
-
-	// Determine queue and exchange
-	queue := c.queue
-	if options.Queue != "" {
-		queue = options.Queue
-	}
-
-	exchange := c.exchange
-	if options.Exchange != "" {
-		exchange = options.Exchange
-	}
-
-	// Create Celery message envelope
-	celeryMsg := NewCeleryMessageWithEncoding(encodedBody, queue, exchange, contentType, bodyEncoding, contentEncoding)
-
-	// Send to broker
-	if err := c.broker.SendTask(ctx, celeryMsg); err != nil {
-		return "", fmt.Errorf("failed to send task: %w", err)
-	}
-
-	return taskMsg.ID, nil
-}
 
 	// Determine queue and exchange
 	queue := c.queue
