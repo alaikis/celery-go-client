@@ -378,6 +378,7 @@ go test -cover
 
 ## 依赖
 
+- `github.com/alaikis/celery-go-client` - 本项目
 - `github.com/google/uuid` - UUID 生成
 - `github.com/redis/go-redis/v9` - Redis 客户端
 - `github.com/rabbitmq/amqp091-go` - AMQP 客户端

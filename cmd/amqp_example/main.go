@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	celery "github.com/celery-go-client"
+	celery "github.com/alaikis/celery-go-client"
 )
 
 func main() {
@@ -24,10 +24,10 @@ func main() {
 	// Create Celery client
 	// UseRawJSONBody: true 启用原始 JSON 消息体,适用于 RabbitMQ 且 worker 配置为接受 JSON 的情况
 	client := celery.NewClient(celery.ClientConfig{
-		Broker:   broker,
-		Queue:    "celery",
-		Exchange: "celery",
-		UseRawJSONBody: true, 
+		Broker:         broker,
+		Queue:          "celery",
+		Exchange:       "celery",
+		UseRawJSONBody: true,
 	})
 	defer client.Close()
 
