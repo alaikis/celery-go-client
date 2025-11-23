@@ -15,7 +15,7 @@
 ## 安装
 
 ```bash
-go get github.com/celery-go-client
+go get github.com/alaikis/celery-go-client
 ```
 
 ## 快速开始
@@ -29,7 +29,7 @@ import (
     "context"
     "log"
     
-    celery "github.com/celery-go-client"
+    celery "github.com/alaikis/celery-go-client"
 )
 
 func main() {
@@ -72,7 +72,7 @@ import (
     "context"
     "log"
     
-    celery "github.com/celery-go-client"
+    celery "github.com/alaikis/celery-go-client"
 )
 
 func main() {
